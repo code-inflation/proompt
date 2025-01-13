@@ -70,6 +70,12 @@ fn process_path(
             match result {
                 Ok(entry) => {
                     if entry.file_type().unwrap().is_file() {
+                        let relative_path = entry
+                            .path()
+                            .strip_prefix(path)
+                            .expect("Failed to get relative path");
+                        let relative_path_str = relative_path.to_string_lossy();
+
                         let should_process = if !args.extension.is_empty() {
                             if let Some(ext) = entry.path().extension().and_then(|e| e.to_str()) {
                                 args.extension.contains(&ext.to_string())
@@ -82,9 +88,10 @@ fn process_path(
 
                         let should_process = should_process
                             && if !args.ignore.is_empty() {
-                                let file_name = entry.file_name().to_string_lossy();
                                 !args.ignore.iter().any(|pattern| {
-                                    glob::Pattern::new(pattern).unwrap().matches(&file_name)
+                                    glob::Pattern::new(pattern)
+                                        .unwrap()
+                                        .matches(&relative_path_str)
                                 })
                             } else {
                                 true
