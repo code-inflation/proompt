@@ -64,12 +64,9 @@ fn parse_file_size(size_str: &str) -> Result<u64, String> {
         .map_err(|_| format!("Invalid file size format: {}", size_str))
 }
 
-fn get_file_metadata(path: &Path) -> Result<(u64, usize, String), std::io::Error> {
+fn get_file_metadata(path: &Path, line_count: usize) -> Result<(u64, usize, String), std::io::Error> {
     let metadata = fs::metadata(path)?;
     let size = metadata.len();
-
-    let content = fs::read_to_string(path)?;
-    let line_count = content.lines().count();
 
     let modified_time = metadata
         .modified()
@@ -135,10 +132,13 @@ fn process_file(
         Err(e) => return Err(e),
     };
 
+    // Calculate line count once (needed for both metadata and truncation)
+    let total_lines = content.lines().count();
+
     // Apply line limit if specified
     let processed_content = if let Some(max_lines) = args.max_lines {
         let lines: Vec<&str> = content.lines().take(max_lines).collect();
-        let truncated = content.lines().count() > max_lines;
+        let truncated = total_lines > max_lines;
         let mut result = lines.join("\n");
         if truncated {
             result.push_str("\n... (truncated)");
@@ -150,7 +150,7 @@ fn process_file(
 
     // Write file header with optional metadata
     if args.add_metadata {
-        match get_file_metadata(path) {
+        match get_file_metadata(path, total_lines) {
             Ok((size, line_count, modified_date)) => {
                 writeln!(
                     writer,
@@ -179,6 +179,7 @@ fn process_file(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
 
     #[test]
     fn test_parse_file_size() {
@@ -202,14 +203,19 @@ mod tests {
 
     #[test]
     fn test_get_file_metadata() {
-        let test_file = "test_temp_file.txt";
-        std::fs::write(test_file, "line1\nline2\nline3").unwrap();
+        let dir = tempdir().unwrap();
+        let test_file = dir.path().join("test_temp_file.txt");
+        std::fs::write(&test_file, "line1\nline2\nline3").unwrap();
 
-        let (size, line_count, _date) = get_file_metadata(std::path::Path::new(test_file)).unwrap();
-        assert_eq!(line_count, 3);
+        // Follow the same pattern as real-world usage: read content first, then get metadata
+        let content = std::fs::read_to_string(&test_file).unwrap();
+        let line_count = content.lines().count();
+
+        let (size, metadata_line_count, _date) = get_file_metadata(&test_file, line_count).unwrap();
+        assert_eq!(metadata_line_count, 3);
         assert_eq!(size, 17); // "line1\nline2\nline3" = 17 bytes
 
-        std::fs::remove_file(test_file).unwrap();
+        // No need to remove file - tempdir will handle cleanup
     }
 }
 
