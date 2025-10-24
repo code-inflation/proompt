@@ -11,6 +11,7 @@ categories = ["command-line-utilities"]
 exclude = [".github/"]
 
 [dependencies]
+chrono = "0.4"
 clap = { version = "4.5.26", features = ["derive"] }
 glob = "0.3.2"
 ignore = "0.4.23"
