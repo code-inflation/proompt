@@ -58,7 +58,8 @@ fn parse_file_size(size_str: &str) -> Result<u64, String> {
         (size_str.as_str(), 1u64)
     };
 
-    num_str.parse::<u64>()
+    num_str
+        .parse::<u64>()
         .map(|n| n * unit)
         .map_err(|_| format!("Invalid file size format: {}", size_str))
 }
@@ -70,7 +71,8 @@ fn get_file_metadata(path: &Path) -> Result<(u64, usize, String), std::io::Error
     let content = fs::read_to_string(path)?;
     let line_count = content.lines().count();
 
-    let modified_time = metadata.modified()
+    let modified_time = metadata
+        .modified()
         .unwrap_or(SystemTime::now())
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default()
@@ -99,7 +101,11 @@ fn format_file_size(size: u64) -> String {
     }
 }
 
-fn process_file(path: &Path, args: &Args, writer: &mut impl std::io::Write) -> Result<(), std::io::Error> {
+fn process_file(
+    path: &Path,
+    args: &Args,
+    writer: &mut impl std::io::Write,
+) -> Result<(), std::io::Error> {
     // Check file size limit
     if let Some(max_size_str) = &args.max_file_size {
         let max_size = parse_file_size(max_size_str)
@@ -146,8 +152,14 @@ fn process_file(path: &Path, args: &Args, writer: &mut impl std::io::Write) -> R
     if args.add_metadata {
         match get_file_metadata(path) {
             Ok((size, line_count, modified_date)) => {
-                writeln!(writer, "{} ({} lines, {}, modified: {})",
-                    path.display(), line_count, format_file_size(size), modified_date)?;
+                writeln!(
+                    writer,
+                    "{} ({} lines, {}, modified: {})",
+                    path.display(),
+                    line_count,
+                    format_file_size(size),
+                    modified_date
+                )?;
             }
             Err(_) => {
                 writeln!(writer, "{}", path.display())?;

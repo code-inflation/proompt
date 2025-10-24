@@ -54,7 +54,6 @@ mod tests {
             .stdout(predicate::str::contains("Contents of hidden file"));
     }
 
-
     #[test]
     fn test_multiple_paths() {
         let dir = tempdir().unwrap();
@@ -332,7 +331,8 @@ mod tests {
         let mut cmd = Command::cargo_bin("proompt").unwrap();
         cmd.arg(&test_dir)
             .arg("--add-metadata")
-            .arg("--max-lines").arg("5");
+            .arg("--max-lines")
+            .arg("5");
         cmd.assert()
             .success()
             .stdout(predicate::str::contains("test.txt ("))
